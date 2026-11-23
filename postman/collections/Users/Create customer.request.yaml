@@ -1,0 +1,13 @@
+$kind: http-request
+id: f5a9817d-8dd4-443a-9644-61e5e6604a51
+url: "{{baseUrl}}/customers"
+method: POST
+headers:
+  Accept: application/json
+  Content-Type: application/json
+body:
+  type: json
+  data:
+    email: cliente@example.com
+    password: at-least-8-characters
+order: 1000

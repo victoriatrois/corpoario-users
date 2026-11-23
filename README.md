@@ -47,6 +47,30 @@ In development mode, Swagger UI is available at
 `http://localhost:8081/q/swagger-ui`. Health checks and Prometheus metrics are
 available at `/q/health` and `/q/metrics`.
 
+## Customer registration
+
+`POST /customers` creates a customer account from a JSON body with `email` and
+`password`:
+
+```json
+{"email": "cliente@example.com", "password": "at-least-8-characters"}
+```
+
+The email is trimmed and lowercased before validation and persistence, and must
+have a dotted domain. The password must have at least 8 characters and at most
+72 bytes in UTF-8 (BCrypt ignores anything longer), and is stored only as a
+BCrypt hash. The server always assigns the `CUSTOMER` role; any `role`, `status`
+or other extra field in the payload is ignored. The response never includes the
+password or its hash.
+
+| Status | Meaning |
+| --- | --- |
+| `201 Created` | Account created; the body has `id`, `email`, `role`, `status` and `createdAt`. |
+| `400 Bad Request` | Missing body, malformed JSON, or an invalid email or password. |
+| `409 Conflict` | An account with this email already exists, ignoring case and surrounding whitespace. |
+
+Errors use the body `{"status": 409, "error": "...", "message": "..."}`.
+
 ## Run the tests
 
 ```bash
