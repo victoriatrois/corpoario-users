@@ -1,0 +1,2 @@
+ALTER TABLE user_accounts ALTER COLUMN email TYPE VARCHAR(254);
+ALTER TABLE user_accounts ALTER COLUMN password_hash TYPE VARCHAR(60);

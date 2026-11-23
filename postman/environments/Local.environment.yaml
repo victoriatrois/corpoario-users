@@ -1,0 +1,7 @@
+name: Local
+id: 3c6179e6-3a7d-419e-851b-1c56c025b7eb
+values:
+  - key: baseUrl
+    value: http://localhost:8081
+    enabled: true
+    type: default

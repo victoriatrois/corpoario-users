@@ -45,6 +45,30 @@ No modo de desenvolvimento, a interface Swagger UI fica disponível em
 `http://localhost:8081/q/swagger-ui`. Os endpoints de health check e métricas
 Prometheus ficam em `/q/health` e `/q/metrics`.
 
+## Cadastro de clientes
+
+`POST /customers` cria uma conta de cliente a partir de um corpo JSON com
+`email` e `password`:
+
+```json
+{"email": "cliente@example.com", "password": "pelo-menos-8-caracteres"}
+```
+
+O email é aparado (trim) e convertido para minúsculas antes da validação e da
+persistência, e deve ter um domínio com ponto. A senha deve ter pelo menos 8
+caracteres e no máximo 72 bytes em UTF-8 (o BCrypt ignora o que passar disso),
+e é armazenada apenas como hash BCrypt. O servidor sempre atribui o papel
+`CUSTOMER`; `role`, `status` ou qualquer outro campo extra no payload é
+ignorado. A resposta nunca inclui a senha nem o seu hash.
+
+| Status | Significado |
+| --- | --- |
+| `201 Created` | Conta criada; o corpo tem `id`, `email`, `role`, `status` e `createdAt`. |
+| `400 Bad Request` | Corpo ausente, JSON malformado, ou email ou senha inválidos. |
+| `409 Conflict` | Já existe uma conta com este email, ignorando maiúsculas e espaços nas extremidades. |
+
+Os erros usam o corpo `{"status": 409, "error": "...", "message": "..."}`.
+
 ## Executar os testes
 
 ```bash
