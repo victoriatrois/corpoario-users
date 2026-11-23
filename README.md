@@ -2,41 +2,67 @@
 
 [Português (Brasil)](README.pt-br.md)
 
-Initial Maven/Java 25 and Quarkus project for the users microservice of a digital atelier platform. It contains dependencies and configuration only: no entities, business endpoints, functional authentication, business rules, UI, email delivery, or verification/recovery flows.
+The Users microservice for the Corpoário digital atelier platform, built
+with Java 25 and Quarkus.
 
-## Stack
+## Requirements
 
-The Quarkus BOM manages REST with Jackson JSON, Hibernate Validator, Hibernate ORM with Panache, PostgreSQL JDBC, Flyway, SmallRye JWT, Elytron Security Common (including `BcryptUtil`), SmallRye OpenAPI, SmallRye Health, and Micrometer's Prometheus registry.
+- JDK 25
+- Maven 3.9 or later
+- Docker with Docker Compose
 
-## Run
+## Run in development mode
 
-Requirements: JDK 25, Maven 3.9+ and an accessible PostgreSQL database. Set `JAVA_HOME` to the JDK 25 installation. In Bash, supply the connection settings through environment variables, without committing them:
+Create a `.env` file in the project root with a local PostgreSQL password:
 
-```sh
-export DB_URL='jdbc:postgresql://<host>:<port>/<database>'
-export DB_USERNAME='<database-user>'
-read -rs QUARKUS_DATASOURCE_PASSWORD; export QUARKUS_DATASOURCE_PASSWORD; echo
+```dotenv
+DB_PASSWORD=local-password
+```
+
+Load the variables into your shell, then start the database and application:
+
+```bash
+set -a
+. ./.env
+set +a
+
+docker compose up -d
 mvn quarkus:dev
 ```
 
-Enter the database password at the prompt. Hibernate schema generation is disabled; Flyway runs migrations at startup. Add future migrations under `src/main/resources/db/migration` using Flyway naming conventions. No migration or schema is provided yet.
+The development PostgreSQL uses port 5434 to avoid conflicting with the
+catalogue. If the container already exists, run `docker compose up -d` again
+to recreate it with the new port. The volume retains its data and initial
+password; changing `DB_PASSWORD` in `.env` does not change an initialized
+database's password.
 
-To build and run the packaged application:
+To stop the database without deleting its data, run `docker compose down`.
+Hibernate schema generation is disabled; Flyway runs migrations at startup.
 
-```sh
-mvn verify
-java -jar target/quarkus-app/quarkus-run.jar
+The defaults for `DB_URL`, `DB_USERNAME` and `DB_PASSWORD` apply to development
+mode only. In production, all three must be provided; the application will not
+start without them.
+
+In development mode, Swagger UI is available at
+`http://localhost:8081/q/swagger-ui`. Health checks and Prometheus metrics are
+available at `/q/health` and `/q/metrics`.
+
+## Run the tests
+
+```bash
+mvn test
 ```
 
-The same environment variables are required when running the packaged application. The default operational endpoints are `/q/openapi`, `/q/health`, and `/q/metrics`. Protect operational endpoints appropriately at the deployment boundary; they are not secured by this starter. JWT verification keys, issuer, authorization policies, and token issuance must be configured and implemented before authentication can be used.
+Tests run against a disposable PostgreSQL container started automatically by
+Quarkus Dev Services, so Docker must be running. They never use the development
+database or `DB_URL`. If the Docker socket is not at the default location,
+configure it before running tests. For the default Colima profile:
 
-## Requirements and invariants for future implementation
+```bash
+export DOCKER_HOST="unix://${HOME}/.colima/default/docker.sock"
+export TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE=/var/run/docker.sock
+```
 
-- Visitors without an account may publicly view the catalog and artist's profile.
-- Registered customers may make purchases and view only their own orders.
-- The artist may manage artwork, profile, and orders.
-- Public registration creates customer accounts only. The service assigns the role; it must not accept or set the role from the request body.
-- The artist account must only be provisioned through a controlled administrative flow, never through public registration.
-- Email addresses must be unique.
-- Passwords must be stored only as strong hashes, never as plaintext. Use a password-specific algorithm such as BCrypt with an appropriate work factor; do not log or return passwords.
-- Email verification and password recovery must be considered in the future design; neither flow is implemented here.
+Export these variables in the same terminal before `mvn quarkus:dev` so
+continuous tests can also find Docker. For another profile or runtime, use the
+endpoint reported by `docker context inspect`.

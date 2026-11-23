@@ -1,40 +1,67 @@
 # Users
 
-Projeto inicial Maven com Java 25 e Quarkus para o microsserviço de usuários de uma plataforma de ateliê digital. Contém apenas dependências e configuração: não há entidades, endpoints de negócio, autenticação funcional, regras de negócio, telas, envio de e-mails nem fluxos de verificação ou recuperação.
+Microsserviço de usuários da plataforma Corpoário, estruturado com Java 25 e
+Quarkus.
 
-## Tecnologias
+## Requisitos
 
-O BOM do Quarkus gerencia REST com JSON via Jackson, Hibernate Validator, Hibernate ORM com Panache, JDBC PostgreSQL, Flyway, SmallRye JWT, Elytron Security Common (incluindo `BcryptUtil`), SmallRye OpenAPI, SmallRye Health e registro Prometheus do Micrometer.
+- JDK 25
+- Maven 3.9 ou superior
+- Docker com Docker Compose
 
-## Execução
+## Executar em desenvolvimento
 
-Requisitos: JDK 25, Maven 3.9+ e um banco PostgreSQL acessível. Configure `JAVA_HOME` para o JDK 25. No Bash, forneça a conexão por variáveis de ambiente, sem incluí-las no repositório:
+Crie um arquivo `.env` na raiz do projeto com uma senha local do PostgreSQL:
 
-```sh
-export DB_URL='jdbc:postgresql://<host>:<porta>/<banco>'
-export DB_USERNAME='<usuario-do-banco>'
-read -rs QUARKUS_DATASOURCE_PASSWORD; export QUARKUS_DATASOURCE_PASSWORD; echo
+```dotenv
+DB_PASSWORD=uma-senha-local
+```
+
+Carregue as variáveis no terminal e inicie o banco e a aplicação:
+
+```bash
+set -a
+. ./.env
+set +a
+
+docker compose up -d
 mvn quarkus:dev
 ```
 
-Digite a senha do banco no prompt. A geração de esquema pelo Hibernate está desabilitada; o Flyway executa as migrações na inicialização. Adicione migrações futuras em `src/main/resources/db/migration`, seguindo a convenção de nomes do Flyway. Ainda não há migração nem esquema.
+O PostgreSQL de desenvolvimento usa a porta 5434 para não conflitar com o
+catálogo. Se o container já existir, execute `docker-compose up -d` novamente
+para recriá-lo com a nova porta. O volume mantém os dados e a senha inicial;
+alterar `DB_PASSWORD` no `.env` não altera a senha de um banco já inicializado.
 
-Para compilar e executar a aplicação empacotada:
+Para parar o banco sem apagar os dados, execute `docker-compose down`.
+A geração de esquema pelo Hibernate está desabilitada; o Flyway executa as
+migrações na inicialização.
 
-```sh
-mvn verify
-java -jar target/quarkus-app/quarkus-run.jar
+Os valores padrão de `DB_URL`, `DB_USERNAME` e `DB_PASSWORD` valem apenas no
+modo de desenvolvimento. Em produção, as três variáveis devem ser informadas; a
+aplicação não inicia sem elas.
+
+No modo de desenvolvimento, a interface Swagger UI fica disponível em
+`http://localhost:8081/q/swagger-ui`. Os endpoints de health check e métricas
+Prometheus ficam em `/q/health` e `/q/metrics`.
+
+## Executar os testes
+
+```bash
+mvn test
 ```
 
-As mesmas variáveis de ambiente são necessárias para executar a aplicação empacotada. Os endpoints operacionais padrão são `/q/openapi`, `/q/health` e `/q/metrics`. Proteja-os adequadamente na infraestrutura de implantação; este projeto inicial não os protege. As chaves de verificação JWT, o emissor, as políticas de autorização e a emissão de tokens devem ser configurados e implementados antes de usar autenticação.
+Os testes usam um container PostgreSQL descartável, iniciado automaticamente
+pelo Quarkus Dev Services; por isso, o Docker precisa estar em execução. Eles
+nunca usam o banco de desenvolvimento nem `DB_URL`. Se o socket do Docker não
+estiver no local padrão, configure-o antes de executar os testes. Para o
+perfil padrão do Colima:
 
-## Requisitos e invariantes para implementação futura
+```bash
+export DOCKER_HOST="unix://${HOME}/.colima/default/docker.sock"
+export TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE=/var/run/docker.sock
+```
 
-- Visitantes sem conta podem consultar publicamente o catálogo e o perfil da artista.
-- Clientes cadastrados podem realizar compras e acompanhar somente os próprios pedidos.
-- A artista pode gerenciar obras, perfil e pedidos.
-- O cadastro público cria exclusivamente contas de cliente. O serviço atribui o papel; ele não deve ser aceito nem definido a partir do corpo da requisição.
-- A conta da artista deve ser provisionada somente por um fluxo administrativo controlado, nunca pelo cadastro público.
-- O e-mail deve ser único.
-- Senhas devem ser armazenadas somente como hashes fortes, nunca em texto puro. Use um algoritmo específico para senhas, como BCrypt, com fator de trabalho adequado; não registre nem retorne senhas.
-- Verificação de e-mail e recuperação de senha devem ser consideradas no desenho futuro; nenhum desses fluxos está implementado aqui.
+Exporte essas variáveis no mesmo terminal antes de `mvn quarkus:dev` para os
+testes contínuos também encontrarem o Docker. Para outro perfil ou runtime,
+use o endpoint informado por `docker context inspect`.
